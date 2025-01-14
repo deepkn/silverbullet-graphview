@@ -125,11 +125,16 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
   const links = pageLinks
     .filter(graphignore.linkfilter.bind(graphignore))
     .map((link) => {
-      if (!nodeNames.includes(link.toPage)) {
+      var linktarget = link.toPage;
+      if (link.hasOwnProperty("toPage") && !nodeNames.includes(link.toPage)) {
         // Add nodes for non-existing pages which are linked to
         nodeNames.push(link.toPage);
+      } else if (link.hasOwnProperty("toFile")) {
+	// Link to a file - add a corresponding node to the graph.
+        nodeNames.push(link.toFile);
+        linktarget = link.toFile;
       }
-      return { "source": link.page, "target": link.toPage };
+      return { "source": link.page, "target": linktarget };
     });
 
   const darkmode = await stateProvider.darkMode();

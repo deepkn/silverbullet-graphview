@@ -23,6 +23,9 @@ supported by scroll and pinch gestures with the mouse(pad).
 
 ### Tags & Paths
 
+Use `ignoredPrefixes` to omit entire path prefixes from being displayed in the
+graph.
+
 Set tags on the pages to customize their appearance in the graph
 
 - `#node_color=ff0000` → Change node color to red
@@ -30,11 +33,14 @@ Set tags on the pages to customize their appearance in the graph
 
 You can also use other custom tags to define node colors: Create a colormap with
 HEX-colorcodes in `SETTINGS.md`. In this example, a node of a page where the tag
-`#garden` is set will be rendered as green:
+`#garden` is set will be rendered as green and a page at a path prefix `🧰 how-to`
+will be rendered with color `#96020e`:
 
 ```yaml
 # Graphview
 graphview:
+  ignoredPrefixes:
+    - "Library/Core"
   default_color: "000000"
   colormap:
     path:
