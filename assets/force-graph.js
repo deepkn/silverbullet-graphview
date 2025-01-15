@@ -69,6 +69,7 @@ function ForceGraph({
 
   // Construct the scales.
   const color = nodeGroup == null ? null : d3.scaleOrdinal(nodeGroups, colors);
+  var zoomLevel = 1;
 
   // Construct the forces.
   const forceNode = d3.forceManyBody();
@@ -111,7 +112,12 @@ function ForceGraph({
     .join("circle")
     .attr("r", d => nodeSizeScale(d.connectivity))
     .attr("stroke", d => `#${d.color}`)
-    .attr("fill", d => `#${d.color}`);
+    .attr("fill", d => `#${d.color}`)
+    .on('mouseenter', mouseEnter)
+    .on('mouseleave', mouseLeave)
+    .on('click', function (event, d) {
+      syscall('event.dispatch','graphview:navigateTo', d.id);
+    });
 
   const labels = svg.append("g")
     .selectAll("text")
@@ -187,8 +193,41 @@ function ForceGraph({
     return Math.max(min, cur);
   }
 
+  function mouseEnter(event, d) {
+    // Get the subgraph for the node
+    const subgraph = node_neighbors(d.id, nodes, links);
+
+    const fadedStrokeOpacity = 0.2;
+
+    // fade everything
+    node.attr("stroke-opacity", fadedStrokeOpacity);
+    node.attr("fill-opacity", fadedStrokeOpacity);
+    link.attr("stroke-opacity", fadedStrokeOpacity);
+    labels.attr("opacity", Math.min(fadedStrokeOpacity, opacity_activation(zoomLevel)));
+
+    // Only highlight the subgraph.
+    node
+      .filter(n => subgraph.nodes.indexOf(n.index) > -1)
+      .attr("stroke-opacity", nodeStrokeOpacity)
+      .attr("fill-opacity", nodeStrokeOpacity)
+    link
+      .filter(l => subgraph.links.indexOf(l.index) > -1)
+      .attr("stroke-opacity", linkStrokeOpacity);
+    labels
+      .filter(n => subgraph.nodes.indexOf(n.index) > -1)
+      .attr("opacity", nodeStrokeOpacity);
+  }
+
+  function mouseLeave(event, d) {
+    node.attr("stroke-opacity", nodeStrokeOpacity);
+    node.attr("fill-opacity", nodeStrokeOpacity);
+    link.attr("stroke-opacity", linkStrokeOpacity);
+    labels.attr("opacity", opacity_activation(zoomLevel));
+  }
+
   function zoomed(event) {
     const t = event.transform;
+    zoomLevel = event.transform.k;
     const translate = "translate(" + t.x + "," + t.y + ")"
     node
       .attr("cx", d => d.x * t.k)
@@ -245,4 +284,18 @@ function opacity_activation(zoom_level) {
   const linear_opacity = (zoom_level - LABEL_VISIBILITY_START_K) / (LABEL_VISIBILITY_END_K - LABEL_VISIBILITY_START_K);
 
   return linear_opacity;
+}
+
+function node_neighbors(nodeId, nodes, links) {
+  // Get the links for the given 'nodeId'.
+  const newlinks = links.filter(link => link.source.id === nodeId);
+
+  // Get the linked nodes to 'nodeId' from the filtered links.
+  var newnodes = newlinks.map(link => nodes.find(newnode => newnode.id === link.target.id));
+  newnodes.push(nodes.find(node => node.id === nodeId));
+
+  return {
+    nodes: newnodes.map(node => node.index),
+    links: newlinks.map(link => link.index)
+  };
 }
