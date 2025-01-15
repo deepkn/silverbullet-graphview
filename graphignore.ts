@@ -5,13 +5,15 @@ export class GraphIgnore {
   ignoredPages: string[];
   ignoredPrefixes: string[];
 
-  constructor(ignoredPages: string[] = []) {
+  constructor(ignoredPages: string[] = [], ignoredPrefixes: string[] = []) {
     this.ignoredPages = ignoredPages;
+    this.ignoredPrefixes = ignoredPrefixes;
   }
 
   // Get all pages tagged with graphignore
   async init(): Promise<void> {
-    this.ignoredPrefixes = await readGraphviewSettings("ignoredPrefixes");
+    const ignoredPrefixesFromSettings = await readGraphviewSettings("ignoredPrefixes");
+    this.ignoredPrefixes = ignoredPrefixesFromSettings ? ignoredPrefixesFromSettings : [];
     this.ignoredPages = (await system.invokeFunction("index.queryObjects", "tag", {
       filter: ["=", ["attr", "name"], ["string", "graphignore"]],
     })).map((tag) => tag.page);
