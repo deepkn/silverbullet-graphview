@@ -11,7 +11,7 @@ This repo is a fork of
 Open (`cmd+k`) your `PLUGS` note in SilverBullet and add this plug to the list:
 
 ```yaml
-- github:silverbulletmd/silverbullet-graphview/graphview.plug.js
+- github:deepkn/silverbullet-graphview/graphview.plug.js
 ```
 
 Then run the `Plugs: Update` command and off you go!
