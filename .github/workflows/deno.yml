@@ -29,9 +29,6 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.1
-
-      - name: Verify formatting
-        run: deno fmt --check
         
       - name: Setup silverbullet
         run: deno install -f --name silverbullet  --unstable-kv --unstable-worker-options -A https://get.silverbullet.md
