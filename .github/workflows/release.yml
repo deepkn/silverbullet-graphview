@@ -3,7 +3,7 @@ name: Release on tag v*.*.*
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "*.*.*"
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           files: |
             graphview.plug.js
