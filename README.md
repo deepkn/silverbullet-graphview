@@ -10,12 +10,12 @@ This repo is a fork of
 
 Open (`cmd+k`) your `PLUGS` note in SilverBullet and add this plug to the list:
 
-* Stable version:
+* Stable version (works with Silverbullet v1):
 ```yaml
 - ghr:deepkn/silverbullet-graphview
 ```
 
-* Development version (only for testing):
+* Development version (only for testing, and has been updated to work with Silverbullet v2):
 ```yaml
 - github:deepkn/silverbullet-graphview/graphview.plug.js
 ```

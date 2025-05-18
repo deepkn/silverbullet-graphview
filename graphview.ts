@@ -108,11 +108,10 @@ async function script(graph: any) {
 
 // Build a SpaceGraph object from the current space
 async function buildGraph(name: string): Promise<SpaceGraph> {
+    // Get all pages in space
+  const pages = await system.invokeFunction("index.queryLuaObjects", "page", {});
   const graphignore = new GraphIgnore();
-  await graphignore.init();
-
-  // Get all pages in space
-  const pages = await space.listPages();
+  await graphignore.init(pages);
   const nodeNames = pages
     .filter(graphignore.pagefilter.bind(graphignore))
     .map(({ name }) => {
@@ -121,7 +120,7 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
 
   // NOTE: This may result to the same link showing multiple times
   //       if the same page has multiple references to another page.
-  const pageLinks = await system.invokeFunction("index.queryObjects", "link");
+  const pageLinks = await system.invokeFunction("index.queryLuaObjects", "link", {});
   const links = pageLinks
     .filter(graphignore.linkfilter.bind(graphignore))
     .map((link) => {
@@ -130,7 +129,7 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
         // Add nodes for non-existing pages which are linked to
         nodeNames.push(link.toPage);
       } else if (link.hasOwnProperty("toFile")) {
-	// Link to a file - add a corresponding node to the graph.
+	      // Link to a file - add a corresponding node to the graph.
         nodeNames.push(link.toFile);
         linktarget = link.toFile;
       }
@@ -138,7 +137,7 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
     });
 
   const darkmode = await stateProvider.darkMode();
-  await colorMapBuilder.init(darkmode);
+  await colorMapBuilder.init(pages, darkmode);
   const colors: ColorMap[] = colorMapBuilder.build();
   const default_color = await readGraphviewSettings("default_color");
 

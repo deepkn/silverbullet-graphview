@@ -24,22 +24,13 @@ export class ColorMapBuilder {
   default_color: any;
   builtin_default_color: any;
 
-  async init(darkmode: bool): Promise<void> {
+  async init(pages: any, darkmode: boolean): Promise<void> {
     // Read settings
     this.colorMapSettings = await readGraphviewSettings("colormap");
     console.log(this.colorMapSettings);
     this.colorMapPathSettings = this.colorMapSettings ? this.colorMapSettings["path"] : [];
     this.colorMapTagSettings = this.colorMapSettings ? this.colorMapSettings["tag"] : [];
-
-    // Get all tags
-    this.spacetags = await system.invokeFunction("index.queryObjects", "tag");
-    this.taggedPages = [...new Set(this.spacetags.map((tag) => tag.page))];
-    this.individuallyTaggedPages = await system.invokeFunction("index.queryObjects", "tag", {
-      filter: ["=~", ["attr", "name"], ["string", "^nodecolor*"]],
-    });
-
-    // Get all pages
-    this.spacepages = await space.listPages();
+    this.spacepages = pages;
 
     // Get default color
     this.default_color = await readGraphviewSettings("default_color");
@@ -51,23 +42,20 @@ export class ColorMapBuilder {
   build(): ColorMap[] {
     // Iterate over all pages
     return this.spacepages.map((page) => {
-      // Get all tags of page
-      const pageTags = this.spacetags.filter((tag) => tag.page === page.name);
-
       // If page has tag with "tag:node_color=" → use color from tag and continue
-      if (this.individuallyTaggedPages.find((t) => t.page === page.name)) {
-        return { "page": page.name, "color": this.individuallyTaggedPages.find((t) => t.page === page.name).name.split("=")[1] };
+      if (page.tags.find((t) => t.startsWith("node_color="))) {
+        return { "page": page.name, "color": page.tags.find((t) => t.startsWith("node_color=")).split("=")[1] };
       }
 
       // If page has a tag from colorMapSettings ["tag"] →  map color code to page name and continue
       if (this.colorMapTagSettings) {
         // check, if any of the tags is in colorMapSettings
-        const pageTagsInColorMapSettings = pageTags.filter((tag) =>
-          this.colorMapTagSettings.hasOwnProperty(tag.name),
+        const pageTagsInColorMapSettings = page.tags.filter((tag) =>
+          this.colorMapTagSettings.hasOwnProperty(tag),
         );
         // if yes, use color from colorMapSettings
         if (pageTagsInColorMapSettings.length > 0) {
-          return { "page": page.name, "color": this.colorMapTagSettings[pageTagsInColorMapSettings[0].name] };
+          return { "page": page.name, "color": this.colorMapTagSettings[pageTagsInColorMapSettings[0]] };
         }
       }
 

@@ -11,28 +11,26 @@ export class GraphIgnore {
   }
 
   // Get all pages tagged with graphignore
-  async init(): Promise<void> {
+  async init(pages: any): Promise<void> {
     const ignoredPrefixesFromSettings = await readGraphviewSettings("ignoredPrefixes");
     this.ignoredPrefixes = ignoredPrefixesFromSettings ? ignoredPrefixesFromSettings : [];
-    this.ignoredPages = (await system.invokeFunction("index.queryObjects", "tag", {
-      filter: ["=", ["attr", "name"], ["string", "graphignore"]],
-    })).map((tag) => tag.page);
+    this.ignoredPages = pages.filter((page: any) => this.isIgnoredPage(page)).map(({ name }) => {return name;});
   }
 
   // Check if a page is tagged with graphignore
-  isIgnoredPage(page: string): boolean {
-    return this.ignoredPages.includes(page) || this.ignoredPrefixes.some(prefix => page.startsWith(prefix));
+  isIgnoredPage(page: any): boolean {
+    return page.tags.includes("graphignore") || this.ignoredPrefixes.some(prefix => page.name.startsWith(prefix));
   }
 
   // Filter function to remove pages tagged with graphignore
   pagefilter(page: any) {
-    return !this.isIgnoredPage(page.name);
+    return !this.ignoredPages.includes(page.name);
   }
 
   // Filter function to remove links to and from pages tagged with graphignore
   linkfilter(link: any) {
-    return !this.isIgnoredPage(link.page) &&
-      ((link.hasOwnProperty("toPage") && !this.isIgnoredPage(link.toPage)) ||
-       (link.hasOwnProperty("toFile") && !this.isIgnoredPage(link.toFile)));
+    return !this.ignoredPages.includes(link.page) &&
+      ((link.hasOwnProperty("toPage") && !this.ignoredPages.includes(link.toPage)) ||
+       (link.hasOwnProperty("toFile") && !this.ignoredPages.includes(link.toFile)));
   }
 }
