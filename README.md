@@ -8,19 +8,28 @@ This repo is a fork of
 
 ## Installation
 
-Open (`cmd+k`) your `PLUGS` note in SilverBullet and add this plug to the list:
+Open (`cmd+k`) your `PLUGS` note in SilverBullet and add this plug to the
+list (v1) or config (v2) as appropriate (Refer to Silverbullet docs).
 
-* Stable version (works with Silverbullet v1):
+* Stable version for Silverbullet v1:
+```yaml
+- ghr:deepkn/silverbullet-graphview/1.0.1
+```
+
+* Stable version for Silverbullet v2:
 ```yaml
 - ghr:deepkn/silverbullet-graphview
 ```
 
-* Development version (only for testing, and has been updated to work with Silverbullet v2):
+* Development version (only for testing, edge and works with only Silverbullet v2):
 ```yaml
 - github:deepkn/silverbullet-graphview/graphview.plug.js
 ```
 
 Then run the `Plugs: Update` command and off you go!
+
+**Note**: A version for v1 exists, but new development will most likely stick to
+edge and therefore v2.
 
 ## Usage
 
