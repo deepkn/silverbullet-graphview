@@ -24,8 +24,14 @@ Then run the `Plugs: Update` command and off you go!
 
 ## Usage
 
-Run the `Show Global Graph` command to open up the graph view. Zoom and pan is
-supported by scroll and pinch gestures with the mouse(pad).
+Run the `Show Global Graph` command to open up the global graph view - global graph is
+your entire space visualized as the graph.
+
+Run the `Show Local Graph` command to open up the local graph view - local graph is
+your current page and it's immediate links, with an option to expand the graph one
+level at a time.
+
+Zoom and pan is supported by scroll and pinch gestures with the mouse(pad).
 
 ### Tags & Paths
 
