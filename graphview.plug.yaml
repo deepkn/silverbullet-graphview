@@ -10,6 +10,13 @@ functions:
       key: ctrl-shift-g
       mac: Cmd-shift-g
 
+  toggleLocal:
+    path: "./graphview.ts:toggleLocalGraphView"
+    command:
+      name: "Show Local Graph"
+      key: ctrl-shift-l
+      mac: Cmd-shift-l
+
   updateGraphView:
     path: "./graphview.ts:updateGraphView"
     events:

@@ -42,6 +42,7 @@ function ForceGraph({
   const N = d3.map(nodes, nodeId).map(intern);
   const C = d3.map(nodes, nodeConnectivity.bind(null, links));
   const COL = d3.map(nodes, d => d.color).map(intern);
+  const CENTER = d3.map(nodes, d => d.isCenter || false);
   const LS = d3.map(links, linkSource).map(intern);
   const LT = d3.map(links, linkTarget).map(intern);
   if (nodeTitle === undefined) nodeTitle = (_, i) => N[i];
@@ -50,7 +51,7 @@ function ForceGraph({
   const W = typeof linkStrokeWidth !== "function" ? null : d3.map(links, linkStrokeWidth);
 
   // Replace the input nodes and links with mutable objects for the simulation.
-  nodes = d3.map(nodes, (_, i) => ({ id: N[i], connectivity: C[i], color: COL[i] }));
+  nodes = d3.map(nodes, (_, i) => ({ id: N[i], connectivity: C[i], color: COL[i], isCenter: CENTER[i] }));
   links = d3.map(links, (_, i) => ({ source: LS[i], target: LT[i] }));
 
   // Compute node connectivity
@@ -110,8 +111,9 @@ function ForceGraph({
     .selectAll("circle")
     .data(nodes)
     .join("circle")
-    .attr("r", d => nodeSizeScale(d.connectivity))
-    .attr("stroke", d => `#${d.color}`)
+    .attr("r", d => d.isCenter ? nodeSizeScale(d.connectivity) * 1.5 : nodeSizeScale(d.connectivity))
+    .attr("stroke", d => d.isCenter ? "#d20103" : `#${d.color}`)
+    .attr("stroke-width", d => d.isCenter ? 3 : nodeStrokeWidth)
     .attr("fill", d => `#${d.color}`)
     .on('mouseenter', mouseEnter)
     .on('mouseleave', mouseLeave)
@@ -137,8 +139,9 @@ function ForceGraph({
       }
     })
     .attr('font-family', 'Sans,Arial')
-    .attr('font-size', d => `${labelSizeScale(d.connectivity)}em`)
-    .attr('fill', d => `#${d.color}`)
+    .attr('font-size', d => d.isCenter ? `${labelSizeScale(d.connectivity) * 1.2}em` : `${labelSizeScale(d.connectivity)}em`)
+    .attr('font-weight', d => d.isCenter ? 'bold' : 'normal')
+    .attr('fill', d => d.isCenter ? "#d20103" : `#${d.color}`)
     .attr('text-anchor', 'middle')
     .attr('class', 'svgtext')
     .on('click', function (event, d) {
@@ -188,8 +191,10 @@ function ForceGraph({
   function resizeNode(d, k) {
     // TODO: Make sure d has some information on the connectedness of a
     // node so that we can vary node sizes based on that.
-    const min = nodeSizeScale(d.connectivity);
-    const cur = nodeSizeScale(d.connectivity) * Math.log(k);
+    const baseSize = nodeSizeScale(d.connectivity);
+    const centerMultiplier = d.isCenter ? 1.5 : 1;
+    const min = baseSize * centerMultiplier;
+    const cur = baseSize * centerMultiplier * Math.log(k);
     return Math.max(min, cur);
   }
 

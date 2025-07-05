@@ -7,14 +7,28 @@ import { readGraphviewSettings } from "utils";
 import { GraphIgnore } from "graphignore";
 
 const stateProvider = new StateProvider("showGraphView");
+const localStateProvider = new StateProvider("showLocalGraphView");
 const colorMapBuilder = new ColorMapBuilder();
 
 // Toggle Graph View and sync state
 export async function toggleGraphView() {
   await stateProvider.toggleGraphViewStatus();
+  await localStateProvider.setGraphViewStatus(false); // Ensure local is off
   if (await stateProvider.getGraphViewStatus()) {
     const name = await editor.getCurrentPage();
-    await renderGraph(name);
+    await renderGraph(name, false);
+  } else {
+    await editor.hidePanel("lhs");
+  }
+}
+
+// Toggle Local Graph View and sync state
+export async function toggleLocalGraphView() {
+  await localStateProvider.toggleGraphViewStatus();
+  await stateProvider.setGraphViewStatus(false); // Ensure global is off
+  if (await localStateProvider.getGraphViewStatus()) {
+    const name = await editor.getCurrentPage();
+    await renderGraph(name, true);
   } else {
     await editor.hidePanel("lhs");
   }
@@ -23,11 +37,18 @@ export async function toggleGraphView() {
 // if something changes, redraw
 export async function updateGraphView() {
   const name = await editor.getCurrentPage();
-  await renderGraph(name);
+  const isLocalMode = await localStateProvider.getGraphViewStatus();
+  const isGlobalMode = await stateProvider.getGraphViewStatus();
+  
+  if (isLocalMode) {
+    await renderGraph(name, true);
+  } else if (isGlobalMode) {
+    await renderGraph(name, false);
+  }
 }
 
 // render function into the LHS-Panel
-async function renderGraph(page: any) {
+async function renderGraph(page: any, isLocalMode: boolean = false) {
   // https://github.com/d3/d3-force
   const graph = await buildGraph(page);
   const graph_json = JSON.stringify(graph);
@@ -39,8 +60,16 @@ async function renderGraph(page: any) {
     "assets/force-graph.js",
     "utf8",
   );
-  const graphfns = await script(graph_json);
-  if (await stateProvider.getGraphViewStatus()) {
+  const graphfns = await script(graph_json, page, isLocalMode);
+  const panelStatus = isLocalMode ? await localStateProvider.getGraphViewStatus() : await stateProvider.getGraphViewStatus();
+  
+  if (panelStatus) {
+    const expandButton = isLocalMode ? `
+      <div id="local-graph-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+        <button id="expand-btn" onclick="expandGraph()" style="padding: 8px 12px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 5px; display: block; width: 100%;">Expand</button>
+        <button id="reset-btn" onclick="resetLocalGraph()" style="padding: 6px 12px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 5px; display: block; width: 100%;">Reset</button>
+        <div id="level-indicator" style="background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; text-align: center;">Level: 1</div>
+      </div>` : '';
     await editor.showPanel(
       "lhs",
       1, // panel flex property
@@ -49,6 +78,7 @@ async function renderGraph(page: any) {
           <style>${css}</style>
         </head>
         <body>
+          ${expandButton}
           <div id="graph"></div>
         </body>
       </html>`,
@@ -63,19 +93,128 @@ async function renderGraph(page: any) {
 }
 
 // Embed script
-async function script(graph: any) {
+async function script(graph: any, currentPage: string, isLocalMode: boolean = false) {
   return `
-    const graph = ${graph};
-    console.log(graph);
+    const fullGraph = ${graph};
+    const currentPage = "${currentPage}";
+    const isLocalMode = ${isLocalMode};
+    let expansionLevel = 1; // Start with immediate neighbors only
+    let visibleGraph = fullGraph;
+
+    console.log('Graph loaded - Nodes: ', fullGraph.nodes.length, 'Links: ', fullGraph.links.length, 'Current page:', currentPage, 'Local mode:', isLocalMode);
+
     const graph_div = document.querySelector('#graph');
     
     let chart;
+    
+    // Function to get neighbors at a specific distance
+    function getNeighborsAtDistance(nodeId, distance, nodes, links) {
+      // Check if the center node exists in the graph
+      const centerNodeExists = nodes.some(node => node.id === nodeId);
+      if (!centerNodeExists) {
+        console.warn('Center node not found in graph:', nodeId);
+        return []; // Return empty if center node doesn't exist
+      }
+      
+      let currentLevel = new Set([nodeId]);
+      let allNeighbors = new Set([nodeId]);
+      
+      for (let level = 0; level < distance; level++) {
+        let nextLevel = new Set();
+        for (let node of currentLevel) {
+          // Find all directly connected nodes (bidirectional)
+          links.forEach(link => {
+            if (link.source === node && !allNeighbors.has(link.target)) {
+              nextLevel.add(link.target);
+              allNeighbors.add(link.target);
+            }
+            if (link.target === node && !allNeighbors.has(link.source)) {
+              nextLevel.add(link.source);
+              allNeighbors.add(link.source);
+            }
+          });
+        }
+        currentLevel = nextLevel;
+        if (currentLevel.size === 0) break; // No more neighbors to expand
+      }
+      
+      return Array.from(allNeighbors);
+    }
+    
+    // Function to filter graph for local view
+    function getLocalGraph(centerNode, level) {
+      if (!isLocalMode) return fullGraph;
+      
+      const visibleNodeIds = getNeighborsAtDistance(centerNode, level, fullGraph.nodes, fullGraph.links);
+      
+      // If no nodes found (e.g., isolated node or non-existent node), show at least the center node
+      if (visibleNodeIds.length === 0) {
+        const centerNodeExists = fullGraph.nodes.some(node => node.id === centerNode);
+        if (centerNodeExists) {
+          visibleNodeIds.push(centerNode);
+        }
+      }
+      
+      const visibleNodes = fullGraph.nodes.filter(node => visibleNodeIds.includes(node.id));
+      const visibleLinks = fullGraph.links.filter(link => 
+        visibleNodeIds.includes(link.source) && visibleNodeIds.includes(link.target)
+      );
+      
+      return { nodes: visibleNodes, links: visibleLinks };
+    }
+    
+    // Function to reset local graph to initial state
+    function resetLocalGraph() {
+      if (!isLocalMode) return;
+      expansionLevel = 1;
+      
+      // Update level indicator
+      const levelIndicator = document.getElementById('level-indicator');
+      if (levelIndicator) {
+        levelIndicator.textContent = \`Level: \${expansionLevel}\`;
+      }
+      
+      visibleGraph = getLocalGraph(currentPage, expansionLevel);
+      createChart();
+    }
+    
+    // Function to expand the local graph
+    function expandGraph() {
+      if (!isLocalMode) return;
+      expansionLevel++;
+      
+      // Update level indicator
+      const levelIndicator = document.getElementById('level-indicator');
+      if (levelIndicator) {
+        levelIndicator.textContent = \`Level: \${expansionLevel}\`;
+      }
+      
+      visibleGraph = getLocalGraph(currentPage, expansionLevel);
+      createChart();
+    }
+    
+    // Make functions globally available
+    window.expandGraph = expandGraph;
+    window.resetLocalGraph = resetLocalGraph;
+    
     function createChart() {
       // Remove the existing chart object from the DOM
       graph_div.innerHTML = '';
+      
+      // Use visible graph in local mode, full graph otherwise
+      const graphToRender = isLocalMode ? getLocalGraph(currentPage, expansionLevel) : fullGraph;
+
+      // In local mode, enhance the center node to make it stand out
+      if (isLocalMode) {
+        graphToRender.nodes.forEach(node => {
+          if (node.id === currentPage) {
+            node.isCenter = true;
+          }
+        });
+      }
     
       // Create a new chart object with the updated dimensions
-      chart = ForceGraph(graph, {
+      chart = ForceGraph(graphToRender, {
         nodeId: d => d.id,
         nodeTitle: d => d.id,
         nodeStrokeOpacity: 0.75,
@@ -87,6 +226,10 @@ async function script(graph: any) {
       graph_div.appendChild(chart);
     }
     
+    // Initialize the graph
+    if (isLocalMode) {
+      visibleGraph = getLocalGraph(currentPage, expansionLevel);
+    }
     createChart();
 
     function handleResize() {
