@@ -3,7 +3,7 @@ name: Release on tag v*.*.*
 on:
   push:
     tags:
-      - "*.*.*"
+      - "v*"
   workflow_dispatch:
 
 jobs:
