@@ -8,8 +8,8 @@ This repo is a fork of
 
 ## Installation
 
-Open (`cmd+k`) your `PLUGS` note in SilverBullet and add this plug to the
-list (v1) or config (v2) as appropriate (Refer to Silverbullet docs).
+Open (`cmd+k`) your `PLUGS` note (v1) or `CONFIG` note (v2) as appropriate (Refer to Silverbullet docs)
+in SilverBullet and add this plug to the list.
 
 * Stable version for Silverbullet v1:
 ```yaml
@@ -57,6 +57,7 @@ HEX-colorcodes in `SETTINGS.md`. In this example, a node of a page where the tag
 `#garden` is set will be rendered as green and a page at a path prefix `🧰 how-to`
 will be rendered with color `#96020e`:
 
+**V1:**
 ```yaml
 # Graphview
 graphview:
@@ -65,12 +66,37 @@ graphview:
   default_color: "000000"
   colormap:
     path:
-      ⚙ services: "01017a"
-      📓 notes: "02bdb6"
-      🚧 projects: "ffc533"
-      🧰 how-to: "96020e"
+      services: "01017a"
+      notes: "02bdb6"
+      projects: "ffc533"
+      how-to: "96020e"
     tag:
       garden: "0bbd02"
+```
+
+**V2:**
+```yaml
+config.set {
+  plugs = {
+    -- Add your plugs here 
+    "ghr:deepkn/silverbullet-graphview",
+    ...
+  },
+  ...
+  graphview = {
+    ignoredPrefixes = {
+      "Library",
+    },
+    colormap = {
+      tag = {
+        services = "01017a",
+        notes = "02bdb6",
+        ...
+      },
+    },
+  },
+...
+}
 ```
 
 ## Links
