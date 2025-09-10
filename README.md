@@ -28,7 +28,7 @@ in SilverBullet and add this plug to the list.
 
 Then run the `Plugs: Update` command and off you go!
 
-**Note**: A version for v1 exists, but new development will most likely stick to
+**Note**: A version for v1 exists(1.0.1), but new development will most likely stick to
 edge and therefore v2.
 
 ## Usage
@@ -42,10 +42,15 @@ level at a time.
 
 Zoom and pan is supported by scroll and pinch gestures with the mouse(pad).
 
-### Tags & Paths
+### Tags, Paths, Colors, Decorations
 
 Use `ignoredPrefixes` to omit entire path prefixes from being displayed in the
 graph.
+
+Silverbullet allows you to add a `pageDecoration.prefix` property to a page, which
+prefixes the page name everywhere. Typically this is an emoji, serves to quickly identify
+a "type" of the page. If `enableDecorations` is set to `true`, and the page has an emoji
+prefix, it will be used to decorate the node in the graph. Note: a longer prefix might get truncated.
 
 Set tags on the pages to customize their appearance in the graph
 
@@ -87,6 +92,7 @@ config.set {
     ignoredPrefixes = {
       "Library",
     },
+    enableDecorations = true,
     colormap = {
       tag = {
         services = "01017a",

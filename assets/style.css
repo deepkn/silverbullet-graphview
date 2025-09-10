@@ -2,8 +2,67 @@ text.svgtext:hover {
   fill: #17115e;
   font-weight: bold;
   cursor: pointer;
+  font-family: var(--ui-font);
 }
 
 body {
   overflow: hidden;
+  font-family: var(--ui-font);
+}
+
+.graphview-root {
+  background-color: var(--root-background-color);
+  font-family: var(--ui-font);
+}
+
+.graphview-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.5rem 0.5rem 0rem;
+  background-color: var(--root-background-color);
+}
+
+.graphview-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: var(--editor-widget-background-color);
+  border: var(--top-border-color) 1px solid;
+  border-radius: 5px;
+  color: var(--top-color);
+}
+
+.graphview-actions-left,
+.graphview-actions-right {
+  display: flex;
+}
+
+.graphview-actions-left {
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 3px;
+  padding: 5px;
+}
+
+.graphview-actions button {
+  display: flex;
+  align-items: center;
+  margin: 3px;
+  padding: 5px;
+  background-color: var(--action-button-background-color);
+  border: 0;
+  color: var(--action-button-color);
+  cursor: pointer;
+  font-family: var(--ui-font);
+}
+
+.graphview-actions button>svg {
+  height: 18px;
+  width: 18px;
+}
+
+.graphview-actions button:hover {
+  color: var(--action-button-hover-color);
 }

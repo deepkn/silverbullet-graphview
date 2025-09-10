@@ -52,7 +52,13 @@ function ForceGraph({
   const W = typeof linkStrokeWidth !== "function" ? null : d3.map(links, linkStrokeWidth);
 
   // Replace the input nodes and links with mutable objects for the simulation.
-  nodes = d3.map(nodes, (_, i) => ({ id: N[i], connectivity: C[i], color: COL[i], isCenter: CENTER[i] }));
+  nodes = d3.map(nodes, (_, i) => ({
+    id: N[i],
+    connectivity: C[i],
+    color: COL[i],
+    isCenter: CENTER[i],
+    emoji: nodes[i].emoji // Preserve emoji data
+  }));
   links = d3.map(links, (_, i) => ({ source: LS[i], target: LT[i] }));
 
   // Compute node connectivity
@@ -122,6 +128,31 @@ function ForceGraph({
       syscall('event.dispatch', 'graphview:navigateTo', d.id);
     });
 
+  // Add emoji text inside nodes for pages that have pageDecoration.prefix
+  const emojiText = svg.append("g")
+    .selectAll("text")
+    .data(nodes.filter(d => d.emoji))
+    .join('text')
+    .text(d => d.emoji)
+    .attr('font-family', 'Arial, sans-serif') // Ensure good emoji rendering
+    .attr('font-size', d => {
+      const baseSize = d.isCenter ? nodeSizeScale(d.connectivity) * 1.5 : nodeSizeScale(d.connectivity);
+      return `${Math.max(baseSize * 0.8, 8)}px`; // Emoji size based on node size, minimum 8px
+    })
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'central')
+    .attr('fill', '#000') // Black text for better contrast against colored nodes
+    .attr('stroke', '#fff') // White outline for visibility on any background
+    .attr('stroke-width', '0.5px')
+    .attr('pointer-events', 'none') // Allow clicks to pass through to the node
+    .attr('x', d => d.x || 0) // Set initial position
+    .attr('y', d => d.y || 0) // Set initial position
+    .attr('opacity', d => {
+      const nodeRadius = d.isCenter ? nodeSizeScale(d.connectivity) * 1.5 : nodeSizeScale(d.connectivity);
+      return nodeRadius > 8 ? 1 : 0; // Initial visibility based on node radius
+    })
+    .style('user-select', 'none');
+
   const labels = svg.append("g")
     .selectAll("text")
     .data(nodes)
@@ -139,7 +170,6 @@ function ForceGraph({
         return result.join('./');
       }
     })
-    .attr('font-family', 'Sans,Arial')
     .attr('font-size', d => d.isCenter ? `${labelSizeScale(d.connectivity) * 1.2}em` : `${labelSizeScale(d.connectivity)}em`)
     .attr('font-weight', d => d.isCenter ? 'bold' : 'normal')
     .attr('fill', d => d.isCenter ? "#d20103" : `#${d.color}`)
@@ -183,6 +213,11 @@ function ForceGraph({
       .attr("cx", d => d.x)
       .attr("cy", d => d.y);
 
+    // Position emoji text to center of nodes
+    emojiText
+      .attr('x', d => d.x)
+      .attr('y', d => d.y);
+
     labels
       .attr('x', d => d.x)
       .attr('y', d => d.y);
@@ -210,6 +245,11 @@ function ForceGraph({
     node.attr("fill-opacity", fadedStrokeOpacity);
     link.attr("stroke-opacity", fadedStrokeOpacity);
     labels.attr("opacity", Math.min(fadedStrokeOpacity, opacity_activation(zoomLevel)));
+    emojiText.attr("opacity", d => {
+      const baseSize = resizeNode(d, zoomLevel);
+      const emojiSize = Math.max(baseSize * 0.8, 8);
+      return emojiSize > 12 ? fadedStrokeOpacity : 0;
+    });
 
     // Only highlight the subgraph.
     node
@@ -222,6 +262,12 @@ function ForceGraph({
     labels
       .filter(n => subgraph.nodes.indexOf(n.index) > -1)
       .attr("opacity", nodeStrokeOpacity);
+    emojiText
+      .filter(n => subgraph.nodes.indexOf(n.index) > -1)
+      .attr("opacity", d => {
+        const nodeRadius = resizeNode(d, zoomLevel);
+        return nodeRadius > 8 ? 1 : 0; // Show only when node radius > 8px
+      });
   }
 
   function mouseLeave(event, d) {
@@ -229,6 +275,10 @@ function ForceGraph({
     node.attr("fill-opacity", nodeFillOpacity);
     link.attr("stroke-opacity", linkStrokeOpacity);
     labels.attr("opacity", opacity_activation(zoomLevel));
+    emojiText.attr("opacity", d => {
+      const nodeRadius = resizeNode(d, zoomLevel);
+      return nodeRadius > 8 ? 1 : 0; // Show only when node radius > 8px
+    });
   }
 
   function zoomed(event) {
@@ -240,6 +290,21 @@ function ForceGraph({
       .attr("cy", d => d.y * t.k)
       .attr("r", d => resizeNode(d, t.k))
       .attr('transform', translate);
+
+    // Position and scale emoji text
+    emojiText
+      .attr('transform', translate)
+      .attr('x', d => d.x * t.k)
+      .attr('y', d => d.y * t.k)
+      .attr('font-size', d => {
+        const baseSize = resizeNode(d, t.k);
+        return `${Math.max(baseSize * 0.8, 8)}px`; // Scale emoji with node, minimum 8px
+      })
+      .attr('opacity', d => {
+        const nodeRadius = resizeNode(d, t.k);
+        return nodeRadius > 8 ? 1 : 0; // Show only when node radius > 8px
+      });
+
     link
       .attr("x1", d => d.source.x * t.k)
       .attr("y1", d => d.source.y * t.k)

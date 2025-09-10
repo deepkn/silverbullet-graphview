@@ -39,7 +39,7 @@ export async function updateGraphView() {
   const name = await editor.getCurrentPage();
   const isLocalMode = await localStateProvider.getGraphViewStatus();
   const isGlobalMode = await stateProvider.getGraphViewStatus();
-  
+
   if (isLocalMode) {
     await renderGraph(name, true);
   } else if (isGlobalMode) {
@@ -55,6 +55,8 @@ async function renderGraph(page: any, isLocalMode: boolean = false) {
   const css = await asset.readAsset("graphview", "assets/style.css", "utf8");
   const d3js = await asset.readAsset("graphview", "assets/d3.js", "utf8");
   const d3forcejs = await asset.readAsset("graphview", "assets/d3-force.js", "utf8");
+  const expandicon = await asset.readAsset("graphview", "assets/expand.svg");
+  const reseticon = await asset.readAsset("graphview", "assets/reset.svg");
   const d3forcegraph = await asset.readAsset(
     "graphview",
     "assets/force-graph.js",
@@ -62,26 +64,30 @@ async function renderGraph(page: any, isLocalMode: boolean = false) {
   );
   const graphfns = await script(graph_json, page, isLocalMode);
   const panelStatus = isLocalMode ? await localStateProvider.getGraphViewStatus() : await stateProvider.getGraphViewStatus();
-  
+
   if (panelStatus) {
     const expandButton = isLocalMode ? `
-      <div id="local-graph-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
-        <button id="expand-btn" onclick="expandGraph()" style="padding: 8px 12px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 5px; display: block; width: 100%;">Expand</button>
-        <button id="reset-btn" onclick="resetLocalGraph()" style="padding: 6px 12px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 5px; display: block; width: 100%;">Reset</button>
-        <div id="level-indicator" style="background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; text-align: center;">Level: 1</div>
-      </div>` : '';
+        <button type="button" id="expand-btn" onclick="expandGraph()" title="Expand graph">${expandicon}</button>
+        <button type="button" id="reset-btn" onclick="resetLocalGraph()" title="Reset graph">${reseticon}</button>
+      ` : '';
     await editor.showPanel(
       "lhs",
       1, // panel flex property
-      `<html>
-        <head>
-          <style>${css}</style>
-        </head>
-        <body>
-          ${expandButton}
-          <div id="graph"></div>
-        </body>
-      </html>`,
+      `
+      <link rel="stylesheet" href="/.client/main.css" />
+      <style>${css}</style>
+      <div class="graphview-root">
+        <div class="graphview-header">
+          <div class="graphview-actions">
+            <div class="graphview-actions-left">Graph View ${isLocalMode ? '(Local)' : '(Global)'}</div>
+            <div class="graphview-actions-right">
+              ${expandButton}
+            </div>
+          </div>
+        </div>
+        <div id="graph"></div>
+      </div>
+      `,
       `
        ${d3js}
        ${d3forcejs}
@@ -251,14 +257,17 @@ async function script(graph: any, currentPage: string, isLocalMode: boolean = fa
 
 // Build a SpaceGraph object from the current space
 async function buildGraph(name: string): Promise<SpaceGraph> {
-    // Get all pages in space
+  // Get all pages in space
   const pages = await system.invokeFunction("index.queryLuaObjects", "page", {});
   const graphignore = new GraphIgnore();
   await graphignore.init(pages);
   const nodeNames = pages
     .filter(graphignore.pagefilter.bind(graphignore))
-    .map(({ name }) => {
-      return name;
+    .map((page) => {
+      return {
+        name: page.name,
+        pageprefix: page.pageDecoration?.prefix
+      };
     });
 
   // NOTE: This may result to the same link showing multiple times
@@ -268,12 +277,12 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
     .filter(graphignore.linkfilter.bind(graphignore))
     .map((link) => {
       var linktarget = link.toPage;
-      if (link.hasOwnProperty("toPage") && !nodeNames.includes(link.toPage)) {
+      if (link.hasOwnProperty("toPage") && !nodeNames.some(node => node.name === link.toPage)) {
         // Add nodes for non-existing pages which are linked to
-        nodeNames.push(link.toPage);
+        nodeNames.push({ name: link.toPage, pageprefix: undefined });
       } else if (link.hasOwnProperty("toFile")) {
-	      // Link to a file - add a corresponding node to the graph.
-        nodeNames.push(link.toFile);
+        // Link to a file - add a corresponding node to the graph.
+        nodeNames.push({ name: link.toFile, pageprefix: undefined });
         linktarget = link.toFile;
       }
       return { "source": link.page, "target": linktarget };
@@ -283,15 +292,30 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
   await colorMapBuilder.init(pages, darkmode);
   const colors: ColorMap[] = colorMapBuilder.build();
   const default_color = await readGraphviewSettings("default_color");
+  const enable_decorations = await readGraphviewSettings("enableDecorations");
 
   const builtin_default_color = darkmode ? "bfbfbf" : "000000";
-  const nodes = nodeNames.map((name) => {
+  const nodes = nodeNames.map((nodeData) => {
+    const name = nodeData.name;
+    const pageprefix = nodeData.pageprefix;
+
     // if page in colors → map color code to page name
     let color = default_color ? default_color : builtin_default_color;
     if (colors.find((c) => c.page === name)) {
       color = colors.find((c) => c.page === name)!.color;
     }
-    return { "id": name, "color": color };
+
+    // Limit prefix to maximum 3 characters and only include if it contains Unicode characters > 127
+    let finalPrefix;
+    if (enable_decorations && pageprefix && [...pageprefix].some((char) => char.charCodeAt(0) > 127)) {
+      finalPrefix = [...pageprefix].slice(0, 3).join(''); // Limit to 3 characters
+    }
+
+    return {
+      "id": name,
+      "color": color,
+      "emoji": finalPrefix
+    };
   });
 
   return { "nodes": nodes, "links": links };
