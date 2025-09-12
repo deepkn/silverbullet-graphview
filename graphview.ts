@@ -69,6 +69,7 @@ async function renderGraph(page: any, isLocalMode: boolean = false) {
     const expandButton = isLocalMode ? `
         <button type="button" id="expand-btn" onclick="expandGraph()" title="Expand graph">${expandicon}</button>
         <button type="button" id="reset-btn" onclick="resetLocalGraph()" title="Reset graph">${reseticon}</button>
+        <div id="level-indicator" class="level-indicator">Level: 1</div>
       ` : '';
     await editor.showPanel(
       "lhs",

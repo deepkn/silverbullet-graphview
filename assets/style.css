@@ -58,6 +58,17 @@ body {
   font-family: var(--ui-font);
 }
 
+.level-indicator {
+  display: flex;
+  align-items: center;
+  font-family: var(--ui-font);
+  vertical-align: center;
+  margin: 3px;
+  padding: 5px;
+  flex: 1;
+  justify-content: center;
+}
+
 .graphview-actions button>svg {
   height: 18px;
   width: 18px;

@@ -129,10 +129,22 @@ function ForceGraph({
     });
 
   // Add emoji text inside nodes for pages that have pageDecoration.prefix
-  const emojiText = svg.append("g")
-    .selectAll("text")
+  const emojiGroup = svg.append("g")
+    .selectAll("g")
     .data(nodes.filter(d => d.emoji))
-    .join('text')
+    .join('g')
+    .attr('pointer-events', 'none'); // Allow clicks to pass through to the node
+
+  // Add background rectangles for better emoji visibility
+  const emojiBackground = emojiGroup.append('rect')
+    .attr('rx', 2) // Rounded corners
+    .attr('ry', 2)
+    .attr('fill', 'rgba(255, 255, 255, 0.3)') // Semi-transparent white background
+    .attr('stroke', 'rgba(0, 0, 0, 0.1)') // Very light border
+    .attr('stroke-width', 0.5);
+
+  // Add the emoji text
+  const emojiText = emojiGroup.append('text')
     .text(d => d.emoji)
     .attr('font-family', 'Arial, sans-serif') // Ensure good emoji rendering
     .attr('font-size', d => {
@@ -141,17 +153,34 @@ function ForceGraph({
     })
     .attr('text-anchor', 'middle')
     .attr('dominant-baseline', 'central')
-    .attr('fill', '#000') // Black text for better contrast against colored nodes
-    .attr('stroke', '#fff') // White outline for visibility on any background
-    .attr('stroke-width', '0.5px')
-    .attr('pointer-events', 'none') // Allow clicks to pass through to the node
-    .attr('x', d => d.x || 0) // Set initial position
-    .attr('y', d => d.y || 0) // Set initial position
+    .attr('fill', '#000') // Black text for better contrast
+    .attr('pointer-events', 'none');
+
+  // Position emoji groups initially and set background dimensions
+  emojiGroup
+    .attr('transform', d => `translate(${d.x || 0}, ${d.y || 0})`)
     .attr('opacity', d => {
       const nodeRadius = d.isCenter ? nodeSizeScale(d.connectivity) * 1.5 : nodeSizeScale(d.connectivity);
       return nodeRadius > 8 ? 1 : 0; // Initial visibility based on node radius
     })
     .style('user-select', 'none');
+
+  // Set background rectangle dimensions based on text size
+  emojiGroup.each(function (d) {
+    const group = d3.select(this);
+    const text = group.select('text').node();
+    const rect = group.select('rect');
+
+    if (text) {
+      const bbox = text.getBBox();
+      const padding = 2; // Padding around the text
+      rect
+        .attr('x', bbox.x - padding)
+        .attr('y', bbox.y - padding)
+        .attr('width', bbox.width + padding * 2)
+        .attr('height', bbox.height + padding * 2);
+    }
+  });
 
   const labels = svg.append("g")
     .selectAll("text")
@@ -213,10 +242,9 @@ function ForceGraph({
       .attr("cx", d => d.x)
       .attr("cy", d => d.y);
 
-    // Position emoji text to center of nodes
-    emojiText
-      .attr('x', d => d.x)
-      .attr('y', d => d.y);
+    // Position emoji groups to center of nodes
+    emojiGroup
+      .attr('transform', d => `translate(${d.x}, ${d.y})`);
 
     labels
       .attr('x', d => d.x)
@@ -245,10 +273,9 @@ function ForceGraph({
     node.attr("fill-opacity", fadedStrokeOpacity);
     link.attr("stroke-opacity", fadedStrokeOpacity);
     labels.attr("opacity", Math.min(fadedStrokeOpacity, opacity_activation(zoomLevel)));
-    emojiText.attr("opacity", d => {
-      const baseSize = resizeNode(d, zoomLevel);
-      const emojiSize = Math.max(baseSize * 0.8, 8);
-      return emojiSize > 12 ? fadedStrokeOpacity : 0;
+    emojiGroup.attr("opacity", d => {
+      const nodeRadius = resizeNode(d, zoomLevel);
+      return nodeRadius > 8 ? fadedStrokeOpacity : 0;
     });
 
     // Only highlight the subgraph.
@@ -262,7 +289,7 @@ function ForceGraph({
     labels
       .filter(n => subgraph.nodes.indexOf(n.index) > -1)
       .attr("opacity", nodeStrokeOpacity);
-    emojiText
+    emojiGroup
       .filter(n => subgraph.nodes.indexOf(n.index) > -1)
       .attr("opacity", d => {
         const nodeRadius = resizeNode(d, zoomLevel);
@@ -275,7 +302,7 @@ function ForceGraph({
     node.attr("fill-opacity", nodeFillOpacity);
     link.attr("stroke-opacity", linkStrokeOpacity);
     labels.attr("opacity", opacity_activation(zoomLevel));
-    emojiText.attr("opacity", d => {
+    emojiGroup.attr("opacity", d => {
       const nodeRadius = resizeNode(d, zoomLevel);
       return nodeRadius > 8 ? 1 : 0; // Show only when node radius > 8px
     });
@@ -291,19 +318,37 @@ function ForceGraph({
       .attr("r", d => resizeNode(d, t.k))
       .attr('transform', translate);
 
-    // Position and scale emoji text
-    emojiText
-      .attr('transform', translate)
-      .attr('x', d => d.x * t.k)
-      .attr('y', d => d.y * t.k)
-      .attr('font-size', d => {
-        const baseSize = resizeNode(d, t.k);
-        return `${Math.max(baseSize * 0.8, 8)}px`; // Scale emoji with node, minimum 8px
-      })
+    // Position and scale emoji groups
+    emojiGroup
+      .attr('transform', d => `${translate} translate(${d.x * t.k}, ${d.y * t.k})`)
       .attr('opacity', d => {
         const nodeRadius = resizeNode(d, t.k);
         return nodeRadius > 8 ? 1 : 0; // Show only when node radius > 8px
       });
+
+    // Update font size and background size for emoji text
+    emojiGroup.select('text')
+      .attr('font-size', d => {
+        const baseSize = resizeNode(d, t.k);
+        return `${Math.max(baseSize * 0.8, 8)}px`; // Scale emoji with node, minimum 8px
+      });
+
+    // Update background rectangle dimensions on zoom
+    emojiGroup.each(function (d) {
+      const group = d3.select(this);
+      const text = group.select('text').node();
+      const rect = group.select('rect');
+
+      if (text) {
+        const bbox = text.getBBox();
+        const padding = 2;
+        rect
+          .attr('x', bbox.x - padding)
+          .attr('y', bbox.y - padding)
+          .attr('width', bbox.width + padding * 2)
+          .attr('height', bbox.height + padding * 2);
+      }
+    });
 
     link
       .attr("x1", d => d.source.x * t.k)
