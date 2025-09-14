@@ -1,4 +1,4 @@
-import { clientStore } from "@silverbulletmd/silverbullet/syscalls";
+import { clientStore, editor } from "@silverbulletmd/silverbullet/syscalls";
 
 export class StateProvider {
   graphViewKey: string;
@@ -17,6 +17,6 @@ export class StateProvider {
     await clientStore.set(this.graphViewKey, !await this.getGraphViewStatus());
   }
   async darkMode(): Promise<boolean> {
-    return !!(await clientStore.get("darkMode"));
+    return !!(await editor.getUiOption("darkMode"));
   }
 }
