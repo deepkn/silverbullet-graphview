@@ -19,7 +19,7 @@ export async function toggleGraphView() {
   await localStateProvider.setGraphViewStatus(false); // Ensure local is off
   if (await stateProvider.getGraphViewStatus()) {
     const name = await editor.getCurrentPage();
-    await renderGraph(name, false, currentPosition);
+    await renderGraph(name, false);
   } else {
     await hideGraphView();
   }
@@ -31,7 +31,7 @@ export async function toggleLocalGraphView() {
   await stateProvider.setGraphViewStatus(false); // Ensure global is off
   if (await localStateProvider.getGraphViewStatus()) {
     const name = await editor.getCurrentPage();
-    await renderGraph(name, true, currentPosition);
+    await renderGraph(name, true);
   } else {
     await hideGraphView();
   }
@@ -44,9 +44,9 @@ export async function updateGraphView() {
   const isGlobalMode = await stateProvider.getGraphViewStatus();
 
   if (isLocalMode) {
-    await renderGraph(name, true, currentPosition);
+    await renderGraph(name, true);
   } else if (isGlobalMode) {
-    await renderGraph(name, false, currentPosition);
+    await renderGraph(name, false);
   }
 }
 
@@ -61,7 +61,7 @@ export async function hideGraphView() {
 }
 
 // render function into the LHS-Panel
-async function renderGraph(page: any, isLocalMode: boolean = false, position: Position = currentPosition) {
+async function renderGraph(page: any, isLocalMode: boolean = false) {
   const pos_str = await readGraphviewSettings("position");
   const curr_config_pos = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
   if (currentPosition && currentPosition !== curr_config_pos) {
