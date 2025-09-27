@@ -11,7 +11,7 @@ const localStateProvider = new StateProvider("showLocalGraphView");
 const colorMapBuilder = new ColorMapBuilder();
 
 // Keeps track of the current rendered position of the graphview
-const pos_str = await readGraphviewSettings("position");
+const pos_str = readGraphviewSettings("position");
 let currentPosition = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
 
 // Toggle Graph View and sync state
