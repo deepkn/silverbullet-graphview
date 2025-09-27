@@ -11,8 +11,7 @@ const localStateProvider = new StateProvider("showLocalGraphView");
 const colorMapBuilder = new ColorMapBuilder();
 
 // Keeps track of the current rendered position of the graphview
-const pos_str = readGraphviewSettings("position");
-let currentPosition = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
+let currentPosition: Position | undefined;
 
 // Toggle Graph View and sync state
 export async function toggleGraphView() {
@@ -22,7 +21,7 @@ export async function toggleGraphView() {
     const name = await editor.getCurrentPage();
     await renderGraph(name, false, currentPosition);
   } else {
-    await editor.hidePanel("lhs", currentPosition);
+    await hideGraphView();
   }
 }
 
@@ -34,7 +33,7 @@ export async function toggleLocalGraphView() {
     const name = await editor.getCurrentPage();
     await renderGraph(name, true, currentPosition);
   } else {
-    await editor.hidePanel("lhs", currentPosition);
+    await hideGraphView();
   }
 }
 
@@ -51,8 +50,24 @@ export async function updateGraphView() {
   }
 }
 
+// Hide the graph panel
+export async function hideGraphView() {
+  if (currentPosition) {
+    await editor.hidePanel(currentPosition);
+    currentPosition = undefined;
+    await stateProvider.setGraphViewStatus(false);
+    await localStateProvider.setGraphViewStatus(false);
+  }
+}
+
 // render function into the LHS-Panel
 async function renderGraph(page: any, isLocalMode: boolean = false, position: Position = currentPosition) {
+  const pos_str = await readGraphviewSettings("position");
+  const curr_config_pos = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
+  if (currentPosition && currentPosition !== curr_config_pos) {
+    // Position changed - hide the old panel first
+    await hideGraphView();
+  }
   // https://github.com/d3/d3-force
   const graph = await buildGraph(page);
   const graph_json = JSON.stringify(graph);
