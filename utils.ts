@@ -1,6 +1,9 @@
 import { readSetting } from "https://deno.land/x/silverbullet@0.10.1/plug-api/lib/settings_page.ts";
 import { editor } from "@silverbulletmd/silverbullet/syscalls";
 
+const POSITIONS = ["rhs", "lhs", "bhs", "modal"] as const;
+
+export type Position = typeof POSITIONS[number];
 
 export async function readGraphviewSettings(key: string) {
   const graphviewSettings = await readSetting("graphview", {});

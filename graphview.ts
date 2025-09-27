@@ -3,12 +3,16 @@ import { asset } from "@silverbulletmd/silverbullet/syscalls";
 import { StateProvider } from "stateprovider";
 import { ColorMap, ColorMapBuilder } from "colormap";
 import type { SpaceGraph } from "./model.ts";
-import { readGraphviewSettings } from "utils";
+import { readGraphviewSettings, Position, POSITIONS } from "utils";
 import { GraphIgnore } from "graphignore";
 
 const stateProvider = new StateProvider("showGraphView");
 const localStateProvider = new StateProvider("showLocalGraphView");
 const colorMapBuilder = new ColorMapBuilder();
+
+// Keeps track of the current rendered position of the graphview
+const pos_str = await readGraphviewSettings("position");
+let currentPosition = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
 
 // Toggle Graph View and sync state
 export async function toggleGraphView() {
@@ -16,9 +20,9 @@ export async function toggleGraphView() {
   await localStateProvider.setGraphViewStatus(false); // Ensure local is off
   if (await stateProvider.getGraphViewStatus()) {
     const name = await editor.getCurrentPage();
-    await renderGraph(name, false);
+    await renderGraph(name, false, currentPosition);
   } else {
-    await editor.hidePanel("lhs");
+    await editor.hidePanel("lhs", currentPosition);
   }
 }
 
@@ -28,9 +32,9 @@ export async function toggleLocalGraphView() {
   await stateProvider.setGraphViewStatus(false); // Ensure global is off
   if (await localStateProvider.getGraphViewStatus()) {
     const name = await editor.getCurrentPage();
-    await renderGraph(name, true);
+    await renderGraph(name, true, currentPosition);
   } else {
-    await editor.hidePanel("lhs");
+    await editor.hidePanel("lhs", currentPosition);
   }
 }
 
@@ -41,14 +45,14 @@ export async function updateGraphView() {
   const isGlobalMode = await stateProvider.getGraphViewStatus();
 
   if (isLocalMode) {
-    await renderGraph(name, true);
+    await renderGraph(name, true, currentPosition);
   } else if (isGlobalMode) {
-    await renderGraph(name, false);
+    await renderGraph(name, false, currentPosition);
   }
 }
 
 // render function into the LHS-Panel
-async function renderGraph(page: any, isLocalMode: boolean = false) {
+async function renderGraph(page: any, isLocalMode: boolean = false, position: Position = currentPosition) {
   // https://github.com/d3/d3-force
   const graph = await buildGraph(page);
   const graph_json = JSON.stringify(graph);
@@ -72,7 +76,7 @@ async function renderGraph(page: any, isLocalMode: boolean = false) {
         <div id="level-indicator" class="level-indicator">Level: 1</div>
       ` : '';
     await editor.showPanel(
-      "lhs",
+      position,
       1, // panel flex property
       `
       <link rel="stylesheet" href="/.client/main.css" />
