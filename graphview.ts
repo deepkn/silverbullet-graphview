@@ -63,8 +63,9 @@ export async function hideGraphView() {
 // render function into the LHS-Panel
 async function renderGraph(page: any, isLocalMode: boolean = false) {
   const pos_str = await readGraphviewSettings("position");
-  const curr_config_pos = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
-  if (currentPosition && currentPosition !== curr_config_pos) {
+  const lastPosition = currentPosition;
+  currentPosition = POSITIONS.includes(pos_str) ? pos_str as Position : "lhs";
+  if (lastPosition && currentPosition !== lastPosition) {
     // Position changed - hide the old panel first
     await hideGraphView();
   }
@@ -91,7 +92,7 @@ async function renderGraph(page: any, isLocalMode: boolean = false) {
         <div id="level-indicator" class="level-indicator">Level: 1</div>
       ` : '';
     await editor.showPanel(
-      position,
+      currentPosition,
       1, // panel flex property
       `
       <link rel="stylesheet" href="/.client/main.css" />
