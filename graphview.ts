@@ -133,6 +133,25 @@ async function script(graph: any, currentPage: string, isLocalMode: boolean = fa
     const graph_div = document.querySelector('#graph');
     
     let chart;
+
+    // Detects whether dark mode is preferred in the browser
+    function prefersDark() {
+      try {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } catch { return false; }
+    }
+
+    // Adjust colors for nodes that use builtin defaults so they match current theme
+    function normalizeThemeColors(g) {
+      const darkDefault = 'bfbfbf';
+      const lightDefault = '000000';
+      const isDark = prefersDark();
+      g.nodes.forEach(n => {
+        if (n.uses_builtin_default) {
+          n.color = isDark ? darkDefault : lightDefault;
+        }
+      });
+    }
     
     // Function to get neighbors at a specific distance
     function getNeighborsAtDistance(nodeId, distance, nodes, links) {
@@ -257,6 +276,8 @@ async function script(graph: any, currentPage: string, isLocalMode: boolean = fa
     if (isLocalMode) {
       visibleGraph = getLocalGraph(currentPage, expansionLevel);
     }
+    // Ensure theme-appropriate defaults before first render
+    normalizeThemeColors(visibleGraph);
     createChart();
 
     function handleResize() {
@@ -273,6 +294,25 @@ async function script(graph: any, currentPage: string, isLocalMode: boolean = fa
       clearTimeout(timeout);
       timeout = setTimeout(handleResize, 250);
     });
+
+    // React to system theme changes on the fly
+    try {
+      if (window.matchMedia) {
+        const m = window.matchMedia('(prefers-color-scheme: dark)');
+        if (m && typeof m.addEventListener === 'function') {
+          m.addEventListener('change', () => {
+            normalizeThemeColors(isLocalMode ? getLocalGraph(currentPage, expansionLevel) : fullGraph);
+            createChart();
+          });
+        } else if (m && typeof m.addListener === 'function') {
+          // Safari/legacy
+          m.addListener(() => {
+            normalizeThemeColors(isLocalMode ? getLocalGraph(currentPage, expansionLevel) : fullGraph);
+            createChart();
+          });
+        }
+      }
+    } catch {}
   `;
 }
 
@@ -312,19 +352,18 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
   const darkmode = await stateProvider.darkMode();
   await colorMapBuilder.init(pages, darkmode);
   const colors: ColorMap[] = colorMapBuilder.build();
-  const default_color = await readGraphviewSettings("default_color");
   const enable_decorations = await readGraphviewSettings("enableDecorations");
 
-  const builtin_default_color = darkmode ? "bfbfbf" : "000000";
   const nodes = nodeNames.map((nodeData) => {
     const name = nodeData.name;
     const pageprefix = nodeData.pageprefix;
 
-    // if page in colors → map color code to page name
-    let color = default_color ? default_color : builtin_default_color;
-    if (colors.find((c) => c.page === name)) {
-      color = colors.find((c) => c.page === name)!.color;
-    }
+    const mapped = colors.find((c) => c.page === name);
+
+    // If there is a color mapping, set the color accordingly
+    const color = (mapped && mapped.color) ? mapped.color : darkmode ? "bfbfbf" : "000000";
+    // Track if this node uses the builtin default color (i.e., no user default and no mapping)
+    const usesBuiltinDefault = !mapped || !mapped.color;
 
     // Limit prefix to maximum 3 characters and only include if it contains Unicode characters > 127
     let finalPrefix;
@@ -335,7 +374,8 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
     return {
       "id": name,
       "color": color,
-      "emoji": finalPrefix
+      "emoji": finalPrefix,
+      "uses_builtin_default": usesBuiltinDefault
     };
   });
 

@@ -17,22 +17,6 @@ export class StateProvider {
     await clientStore.set(this.graphViewKey, !await this.getGraphViewStatus());
   }
   async darkMode(): Promise<boolean> {
-    // Try UI option first
-    const uiOption = await editor.getUiOption("darkMode");
-    if (uiOption !== undefined && uiOption !== null) {
-      return !!uiOption;
-    }
-
-    // Infer from document.documentElement.dataset.theme ("dark" | "light" | ...) as fallback
-    try {
-      const theme = (globalThis as any)?.document?.documentElement?.dataset?.theme as
-        | string
-        | undefined;
-      if (theme) {
-        return theme.toLowerCase() === "dark";
-      }
-    } catch { }
-
-    return false;
+    return !!(await editor.getUiOption("darkMode"));
   }
 }

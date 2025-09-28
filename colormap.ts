@@ -70,7 +70,7 @@ export class ColorMapBuilder {
       }
 
       // Use default color
-      return { "page": page.name, "color": this.default_color ? this.default_color : this.builtin_default_color };
+      return { "page": page.name, "color": this.default_color };
     });
   }
 }

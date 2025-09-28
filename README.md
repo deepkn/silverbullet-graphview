@@ -42,15 +42,7 @@ level at a time.
 
 Zoom and pan is supported by scroll and pinch gestures with the mouse(pad).
 
-### Tags, Paths, Colors, Decorations
-
-Use `ignoredPrefixes` to omit entire path prefixes from being displayed in the
-graph.
-
-Silverbullet allows you to add a `pageDecoration.prefix` property to a page, which
-prefixes the page name everywhere. Typically this is an emoji, serves to quickly identify
-a "type" of the page. If `enableDecorations` is set to `true`, and the page has an emoji
-prefix, it will be used to decorate the node in the graph. Note: a longer prefix might get truncated.
+### Tags, Paths, Colors, Decorations and other options
 
 Set tags on the pages to customize their appearance in the graph
 
@@ -59,8 +51,22 @@ Set tags on the pages to customize their appearance in the graph
 
 You can also use other custom tags to define node colors: Create a colormap with
 HEX-colorcodes in `SETTINGS.md`. In this example, a node of a page where the tag
-`#garden` is set will be rendered as green and a page at a path prefix `🧰 how-to`
-will be rendered with color `#96020e`:
+`#garden` is set will be rendered as green and a page at a path prefix `how-to`
+will be rendered with color `#96020e`.
+
+- `default_color` - Set the default color for all nodes in the graph. If not set, the plug
+will choose sensible defaults based on whether the app is using light/dark mode.
+
+- `ignoredPrefixes` - Use `ignoredPrefixes` to omit entire path prefixes from being displayed 
+in the graph.
+
+- `position` (v2 only) - Specifies where the graph panel opens up. Can be one of `lhs` (left), `rhs` (right),
+`bhs` (bottom), `modal` (modal window). Defaults to `lhs`.
+
+- `enableDecorations` (v2 only) - Silverbullet allows you to add a `pageDecoration.prefix` property to a page,
+which prefixes the page name everywhere. Typically this is an emoji, serves to quickly identify
+a "type" of the page. If `enableDecorations` is set to `true`, and the page has an emoji
+prefix, it will be used to decorate the node in the graph. Note: a longer prefix might get truncated.
 
 **V1:**
 ```yaml
@@ -93,6 +99,7 @@ config.set {
       "Library",
     },
     enableDecorations = true,
+    position = "modal",
     colormap = {
       tag = {
         services = "01017a",
