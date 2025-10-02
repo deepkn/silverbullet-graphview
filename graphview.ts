@@ -258,6 +258,8 @@ async function script(graph: any, currentPage: string, isLocalMode: boolean = fa
           }
         });
       }
+      // Ensure theme-appropriate defaults on every render (including expand/reset)
+      normalizeThemeColors(graphToRender);
     
       // Create a new chart object with the updated dimensions
       chart = ForceGraph(graphToRender, {
@@ -353,6 +355,8 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
   await colorMapBuilder.init(pages, darkmode);
   const colors: ColorMap[] = colorMapBuilder.build();
   const enable_decorations = await readGraphviewSettings("enableDecorations");
+  const default_color = await readGraphviewSettings("default_color");
+  const builtin_default_color = darkmode ? "bfbfbf" : "000000";
 
   const nodes = nodeNames.map((nodeData) => {
     const name = nodeData.name;
@@ -361,9 +365,9 @@ async function buildGraph(name: string): Promise<SpaceGraph> {
     const mapped = colors.find((c) => c.page === name);
 
     // If there is a color mapping, set the color accordingly
-    const color = (mapped && mapped.color) ? mapped.color : darkmode ? "bfbfbf" : "000000";
-    // Track if this node uses the builtin default color (i.e., no user default and no mapping)
-    const usesBuiltinDefault = !mapped || !mapped.color;
+    const color = (mapped && mapped.color) ? mapped.color : builtin_default_color;
+    // Track if this node ultimately used the builtin default (only when no user default configured)
+    const usesBuiltinDefault = !default_color && color === builtin_default_color;
 
     // Limit prefix to maximum 3 characters and only include if it contains Unicode characters > 127
     let finalPrefix;
